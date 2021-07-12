@@ -20,27 +20,43 @@ def create_app():
 
     @app.route("/handwrite/input", methods=["POST"])
     def receive_image():
-        # TODO Code for when image isn't successfully created, also check exception handlers
-        # in Flask
-        image = request.files["image"].read()
-        imgarr = np.frombuffer(image, np.uint8)
-        img = cv2.imdecode(imgarr, cv2.IMREAD_COLOR)
-
+        responses = {
+            0: "Received",
+            1: "Not Found",
+            2: "Can't Process Image",
+            3: "Internal Server Error",
+        }
+        response = 3
         path = None
-        with tempfile.NamedTemporaryFile(dir=in_files_dir) as f:
-            cv2.imwrite(f.name + ".jpg", img)
-            with open(status_files_dir + os.sep + os.path.basename(f.name), "w") as fs:
-                pass
-            path = f.name.split(os.sep)[-1]
 
-        if (
-            path
-            and os.path.exists(in_files_dir + os.sep + path + ".jpg")
-            and os.path.exists(status_files_dir + os.sep + path)
-        ):
-            return jsonify(path=path)
+        if "image" in request.files and request.files["image"]:
+            try:
+                image = request.files["image"].read()
+                imgarr = np.frombuffer(image, np.uint8)
+                img = cv2.imdecode(imgarr, cv2.IMREAD_COLOR)
+            except:
+                response = 2
+
+            try:
+                with tempfile.NamedTemporaryFile(dir=in_files_dir) as f:
+                    cv2.imwrite(f.name + ".jpg", img)
+                    with open(
+                        status_files_dir + os.sep + os.path.basename(f.name), "w"
+                    ) as fs:
+                        pass
+                    path = f.name.split(os.sep)[-1]
+            except:
+                pass
+            if (
+                path
+                and os.path.exists(in_files_dir + os.sep + path + ".jpg")
+                and os.path.exists(status_files_dir + os.sep + path)
+            ):
+                response = 0
         else:
-            return jsonify(error="Bad Request!")
+            response = 1
+
+        return jsonify(response_code=response, message=responses[response], path=path)
 
     @app.route("/handwrite/status/<path>")
     def process_status(path):
@@ -72,7 +88,7 @@ def create_app():
         """
         fontpath = out_files_dir + os.sep + path + os.sep + "MyFont.ttf"
         if os.path.exists(fontpath):
-            fontfile = send_file(fontpath, as_attachment=True,)
+            fontfile = send_file(fontpath, as_attachment=True)
             shutil.rmtree(out_files_dir + os.sep + path)
             return fontfile
         return jsonify(error="File Not Found!")
