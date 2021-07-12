@@ -3,8 +3,19 @@ import shutil
 import tempfile
 import gc
 import time
+from uuid import uuid4
+
 from handwrite.cli import converters
 
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import storage
+
+if not firebase_admin._apps:
+    cred = credentials.Certificate("firebasekey.json")
+    firebase_admin.initialize_app(cred)
+
+bucket = storage.bucket('handwrite-2bb53.appspot.com')
 
 CURRENT_Q = []  # TODO Use Queue?
 
@@ -51,6 +62,13 @@ def handwrite_background():
                 out_files_dir + os.sep + name,
                 os.path.dirname(os.path.abspath(__file__)) + "/default.json",
             )
+            try:
+                metadata  = {"firebaseStorageDownloadTokens": uuid4()}
+                blob = bucket.blob(name)
+                blob.metadata = metadata
+                blob.upload_from_filename(in_files_dir + os.sep + image_name)
+            except:
+                print(f"Image Upload Failed: {image_name}")
             os.remove(in_files_dir + os.sep + image_name)
             os.remove(status_files_dir + os.sep + name)
             shutil.rmtree(temp_dir)
