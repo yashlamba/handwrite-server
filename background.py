@@ -15,7 +15,7 @@ if not firebase_admin._apps:
     cred = credentials.Certificate("firebasekey.json")
     firebase_admin.initialize_app(cred)
 
-bucket = storage.bucket('handwrite-2bb53.appspot.com')
+bucket = storage.bucket("handwrite-2bb53.appspot.com")
 
 CURRENT_Q = []  # TODO Use Queue?
 
@@ -25,14 +25,17 @@ def handwrite_background():
     in_files_dir = os.path.join(server_dir, "infiles")
     out_files_dir = os.path.join(server_dir, "outfiles")
     status_files_dir = os.path.join(server_dir, "status")
+    error_status_dir = os.path.join(server_dir, "error")
 
     shutil.rmtree(in_files_dir, ignore_errors=True)
     shutil.rmtree(status_files_dir, ignore_errors=True)
     shutil.rmtree(out_files_dir, ignore_errors=True)
+    shutil.rmtree(error_status_dir, ignore_errors=True)
 
     os.makedirs(in_files_dir)
     os.makedirs(status_files_dir)
     os.makedirs(out_files_dir)
+    os.makedirs(error_status_dir)
 
     prev_time = time.time()
     count = 0
@@ -48,27 +51,27 @@ def handwrite_background():
                 CURRENT_Q.append(files.pop(0))
 
         if CURRENT_Q:
-            # TODO
-            # Return something for images that didn't work.
-            # Maybe create a file named in outfiles/path ERROR
-            print(CURRENT_Q)
             name = CURRENT_Q.pop(0)
             image_name = name + ".jpg"
             temp_dir = tempfile.mkdtemp()
             os.makedirs(out_files_dir + os.sep + name)
-            converters(
-                in_files_dir + os.sep + image_name,
-                temp_dir,
-                out_files_dir + os.sep + name,
-                os.path.dirname(os.path.abspath(__file__)) + "/default.json",
-            )
             try:
-                metadata  = {"firebaseStorageDownloadTokens": uuid4()}
-                blob = bucket.blob(name)
-                blob.metadata = metadata
-                blob.upload_from_filename(in_files_dir + os.sep + image_name)
+                converters(
+                    in_files_dir + os.sep + image_name,
+                    temp_dir,
+                    out_files_dir + os.sep + name,
+                    os.path.dirname(os.path.abspath(__file__)) + "/default.json",
+                )
+                try:
+                    metadata = {"firebaseStorageDownloadTokens": uuid4()}
+                    blob = bucket.blob(name)
+                    blob.metadata = metadata
+                    blob.upload_from_filename(in_files_dir + os.sep + image_name)
+                except:
+                    print(f"Image Upload Failed: {image_name}")
             except:
-                print(f"Image Upload Failed: {image_name}")
+                open(error_status_dir + os.sep + name, "w").close()
+                print(f"Unable to process Image: {image_name}")
             os.remove(in_files_dir + os.sep + image_name)
             os.remove(status_files_dir + os.sep + name)
             shutil.rmtree(temp_dir)

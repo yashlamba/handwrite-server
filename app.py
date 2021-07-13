@@ -17,6 +17,7 @@ def create_app():
     in_files_dir = os.path.join(server_dir, "infiles")
     out_files_dir = os.path.join(server_dir, "outfiles")
     status_files_dir = os.path.join(server_dir, "status")
+    error_status_dir = os.path.join(server_dir, "error")
 
     @app.route("/handwrite/input", methods=["POST"])
     def receive_image():
@@ -40,10 +41,9 @@ def create_app():
             try:
                 with tempfile.NamedTemporaryFile(dir=in_files_dir) as f:
                     cv2.imwrite(f.name + ".jpg", img)
-                    with open(
+                    open(
                         status_files_dir + os.sep + os.path.basename(f.name), "w"
-                    ) as fs:
-                        pass
+                    ).close()
                     path = f.name.split(os.sep)[-1]
             except:
                 pass
@@ -64,14 +64,20 @@ def create_app():
         Returns:
             0 if Done
             1 if Processing
-            2 if Not found in requests
+            2 if Unable to process
+            3 if Not found in requests
         """
+        if os.path.exists(error_status_dir + os.sep + path):
+            os.remove(error_status_dir + os.sep + path)
+            shutil.rmtree(out_files_dir + os.sep + path)
+            return jsonify(status=2)
+
         fontfile, statusfile = (
             os.path.exists(out_files_dir + os.sep + path + os.sep + "MyFont.ttf"),
             os.path.exists(status_files_dir + os.sep + path),
         )
 
-        status = 2
+        status = 3
         if fontfile:
             status = 0
         elif statusfile:
