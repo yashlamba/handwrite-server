@@ -14,10 +14,9 @@ def create_app():
     # app.config["CORS_HEADERS"] = "Content-Type"
 
     server_dir = os.path.dirname(os.path.abspath(__file__))
-    in_files_dir = os.path.join(server_dir, "infiles")
-    out_files_dir = os.path.join(server_dir, "outfiles")
-    status_files_dir = os.path.join(server_dir, "status")
-    error_status_dir = os.path.join(server_dir, "error")
+    dirs = {}
+    for dir_name in ["infiles", "outfiles", "status", "error"]:
+        dirs[dir_name] = os.path.join(server_dir, dir_name)
 
     @app.route("/handwrite/input", methods=["POST"])
     def receive_image():
@@ -39,18 +38,18 @@ def create_app():
                 response = 2
 
             try:
-                with tempfile.NamedTemporaryFile(dir=in_files_dir) as f:
+                with tempfile.NamedTemporaryFile(dir=dirs["infiles"]) as f:
                     cv2.imwrite(f.name + ".jpg", img)
                     open(
-                        status_files_dir + os.sep + os.path.basename(f.name), "w"
+                        dirs["status"] + os.sep + os.path.basename(f.name), "w"
                     ).close()
                     path = f.name.split(os.sep)[-1]
             except:
                 pass
             if (
                 path
-                and os.path.exists(in_files_dir + os.sep + path + ".jpg")
-                and os.path.exists(status_files_dir + os.sep + path)
+                and os.path.exists(dirs["infiles"] + os.sep + path + ".jpg")
+                and os.path.exists(dirs["status"] + os.sep + path)
             ):
                 response = 0
         else:
@@ -67,18 +66,19 @@ def create_app():
             2 if Unable to process
             3 if Not found in requests
         """
-        if os.path.exists(error_status_dir + os.sep + path):
-            os.remove(error_status_dir + os.sep + path)
-            shutil.rmtree(out_files_dir + os.sep + path)
-            return jsonify(status=2)
-
-        fontfile, statusfile = (
-            os.path.exists(out_files_dir + os.sep + path + os.sep + "MyFont.ttf"),
-            os.path.exists(status_files_dir + os.sep + path),
+        fontfile, statusfile, errorfile = (
+            os.path.exists(dirs["outfiles"] + os.sep + path + os.sep + "MyFont.ttf"),
+            os.path.exists(dirs["status"] + os.sep + path),
+            os.path.exists(dirs["error"] + os.sep + path),
         )
 
         status = 3
-        if fontfile:
+        if errorfile:
+            status = 2
+            os.remove(dirs["error"] + os.sep + path)
+            shutil.rmtree(dirs["outfiles"] + os.sep + path)
+
+        elif fontfile:
             status = 0
         elif statusfile:
             status = 1
@@ -92,10 +92,10 @@ def create_app():
             fontfile if found
             else json with error
         """
-        fontpath = out_files_dir + os.sep + path + os.sep + "MyFont.ttf"
+        fontpath = dirs["outfiles"] + os.sep + path + os.sep + "MyFont.ttf"
         if os.path.exists(fontpath):
             fontfile = send_file(fontpath, as_attachment=True)
-            shutil.rmtree(out_files_dir + os.sep + path)
+            shutil.rmtree(dirs["outfiles"] + os.sep + path)
             return fontfile
         return jsonify(error="File Not Found!")
 
