@@ -74,9 +74,9 @@ def handwrite_background():
             count = 0
 
         if (time.time() - prev_time) / 60 > 2:
-            for dir_name, dir_path in dirs.values():
-                for fd in os.listdir(dir_path):
-                    path = dir_path + os.sep + fd
+            for dir_name in ["outfiles", "error"]:
+                for fd in os.listdir(dirs[dir_name]):
+                    path = dirs[dir_name] + os.sep + fd
                     if (time.time() - os.stat(path).st_mtime) / 60 > 5:
                         print(f"Deleting: {path}")
                         if dir_name == "outfiles":

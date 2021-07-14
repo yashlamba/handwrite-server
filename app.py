@@ -14,9 +14,10 @@ def create_app():
     # app.config["CORS_HEADERS"] = "Content-Type"
 
     server_dir = os.path.dirname(os.path.abspath(__file__))
-    dirs = {}
-    for dir_name in ["infiles", "outfiles", "status", "error"]:
-        dirs[dir_name] = os.path.join(server_dir, dir_name)
+    dirs = {
+        dir_name: os.path.join(server_dir, dir_name)
+        for dir_name in ["infiles", "outfiles", "status", "error"]
+    }
 
     @app.route("/handwrite/input", methods=["POST"])
     def receive_image():
@@ -77,7 +78,6 @@ def create_app():
             status = 2
             os.remove(dirs["error"] + os.sep + path)
             shutil.rmtree(dirs["outfiles"] + os.sep + path)
-
         elif fontfile:
             status = 0
         elif statusfile:
