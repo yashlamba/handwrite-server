@@ -1,0 +1,39 @@
+name: "Tests"
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Create firebasekey.json
+        uses: jsdaniell/create-json@1.1.2
+        if: github.ref == 'refs/heads/main'
+        with:
+          name: "firebasekey.json"
+          json: ${{ secrets.FIREBASE_KEY }}
+
+      - name: Build, Push and Deploy to Heroku Main Server
+        id: heroku-main
+        uses: akhileshns/heroku-deploy@v3.12.12
+        if: github.ref == 'refs/heads/main'
+        with:
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+          usedocker: True
+          stack: container
+
+      - name: Build, Push and Deploy to Heroku Test Server
+        id: heroku-test
+        uses: akhileshns/heroku-deploy@v3.12.12
+        if: github.ref != 'refs/heads/main'
+        with:
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_TEST_APP_NAME }}
+          usedocker: True
+          stack: container
