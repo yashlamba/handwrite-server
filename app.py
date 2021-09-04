@@ -43,7 +43,9 @@ def create_app():
                 response = 2
 
             try:
-                research_option = "_1000" if request.form.get("research") else ""
+                research_option = (
+                    "_1000" if request.form.get("research") == "true" else ""
+                )
                 file_name = str(uuid.uuid4()) + research_option
                 cv2.imwrite(dirs["infiles"] + os.sep + file_name + ".jpg", img)
                 open(dirs["status"] + os.sep + file_name, "w").close()
