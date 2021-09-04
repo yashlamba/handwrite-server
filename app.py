@@ -7,11 +7,14 @@ import numpy as np
 from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
 
+from setup_logging import setup_logger
+
 
 def create_app():
     app = Flask(__name__)
+    setup_logger(app.logger)
+    logger = app.logger
     CORS(app)
-    # app.config["CORS_HEADERS"] = "Content-Type"
 
     server_dir = os.path.dirname(os.path.abspath(__file__))
     dirs = {
@@ -45,6 +48,7 @@ def create_app():
                         dirs["status"] + os.sep + os.path.basename(f.name), "w"
                     ).close()
                     path = f.name.split(os.sep)[-1]
+                    logger.info(f"Request Created for Background Service {path}")
             except:
                 pass
             if (
@@ -78,6 +82,7 @@ def create_app():
             status = 2
             os.remove(dirs["error"] + os.sep + path)
             shutil.rmtree(dirs["outfiles"] + os.sep + path)
+            logger.info(f"Cleaned Processing Data for Errored Request {path}")
         elif fontfile:
             status = 0
         elif statusfile:
@@ -96,6 +101,7 @@ def create_app():
         if os.path.exists(fontpath):
             fontfile = send_file(fontpath, as_attachment=True)
             shutil.rmtree(dirs["outfiles"] + os.sep + path)
+            logger.info(f"Sent and cleaned fontfile path {path}")
             return fontfile
         return jsonify(error="File Not Found!")
 
