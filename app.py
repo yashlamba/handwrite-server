@@ -1,4 +1,5 @@
 import os
+import uuid
 import shutil
 import tempfile
 
@@ -42,13 +43,12 @@ def create_app():
                 response = 2
 
             try:
-                with tempfile.NamedTemporaryFile(dir=dirs["infiles"]) as f:
-                    cv2.imwrite(f.name + ".jpg", img)
-                    open(
-                        dirs["status"] + os.sep + os.path.basename(f.name), "w"
-                    ).close()
-                    path = f.name.split(os.sep)[-1]
-                    logger.info(f"Request Created for Background Service {path}")
+                research_option = "_1000" if request.form.get("research") else ""
+                file_name = str(uuid.uuid4()) + research_option
+                cv2.imwrite(dirs["infiles"] + os.sep + file_name + ".jpg", img)
+                open(dirs["status"] + os.sep + file_name, "w").close()
+                path = file_name
+                logger.info(f"Request Created for Background Service {path}")
             except:
                 pass
             if (
